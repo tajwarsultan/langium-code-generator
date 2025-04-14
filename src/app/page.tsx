@@ -1,103 +1,114 @@
-import Image from "next/image";
+"use client"
+
+import { useState } from "react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import DirectorySelector from "@/components/directory-selector"
+import GrammarEditor from "@/components/grammar-editor"
+import InputEditor from "@/components/input-editor"
+import TemplateEditor from "@/components/template-editor"
+import ResultViewer from "@/components/result-viewer"
+import BatchPanel from "@/components/batch-panel"
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [dslDirectory, setDslDirectory] = useState<any | null>(null)
+  const [inputDirectory, setInputDirectory] = useState<any | null>(null)
+  const [templatesDirectory, setTemplatesDirectory] = useState<any | null>(null)
+  const [targetDirectory, setTargetDirectory] = useState<any | null>(null)
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+  const [selectedInputFile, setSelectedInputFile] = useState<string | null>(null)
+  const [selectedTemplateFile, setSelectedTemplateFile] = useState<string | null>(null)
+  const [selectedTargetFile, setSelectedTargetFile] = useState<string | null>(null)
+
+  const [grammarChanged, setGrammarChanged] = useState(false)
+  const [inputChanged, setInputChanged] = useState(false)
+  const [templateChanged, setTemplateChanged] = useState(false)
+
+  return (
+    <main className="container mx-auto p-4 h-screen flex flex-col">
+      <h1 className="text-2xl font-bold mb-4">Langium Code Generator</h1>
+
+      <div className="grid grid-cols-4 gap-4 mb-4">
+        <DirectorySelector
+          label="DSL Directory"
+          directory={dslDirectory}
+          onDirectoryChange={setDslDirectory}
+          checkBeforeChange={() => {
+            if (grammarChanged) {
+              alert("Please reset or save Grammar first!")
+              return false
+            }
+            return true
+          }}
+        />
+        <DirectorySelector
+          label="Input Directory"
+          directory={inputDirectory}
+          onDirectoryChange={setInputDirectory}
+          checkBeforeChange={() => {
+            if (inputChanged) {
+              alert("Please reset or save Input file first!")
+              return false
+            }
+            return true
+          }}
+        />
+        <DirectorySelector
+          label="Templates Directory"
+          directory={templatesDirectory}
+          onDirectoryChange={setTemplatesDirectory}
+        />
+        <DirectorySelector
+          label="Target Directory"
+          directory={targetDirectory}
+          onDirectoryChange={setTargetDirectory}
+        />
+      </div>
+
+      <Tabs defaultValue="single" className="flex-1 flex flex-col">
+        <TabsList>
+          <TabsTrigger value="single">Single</TabsTrigger>
+          <TabsTrigger value="batch">Batch</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="single" className="flex-1 flex flex-col">
+          <div className="grid grid-cols-2 gap-4 h-full">
+            <div className="flex flex-col">
+              <GrammarEditor dslDirectory={dslDirectory} onContentChange={(changed) => setGrammarChanged(changed)} />
+            </div>
+            <div className="flex flex-col">
+              <InputEditor
+                inputDirectory={inputDirectory}
+                selectedFile={selectedInputFile}
+                onFileSelect={setSelectedInputFile}
+                onContentChange={(changed) => setInputChanged(changed)}
+              />
+            </div>
+            <div className="flex flex-col">
+              <TemplateEditor
+                templatesDirectory={templatesDirectory}
+                selectedFile={selectedTemplateFile}
+                onFileSelect={setSelectedTemplateFile}
+                onContentChange={(changed) => setTemplateChanged(changed)}
+              />
+            </div>
+            <div className="flex flex-col">
+              <ResultViewer
+                targetDirectory={targetDirectory}
+                selectedFile={selectedTargetFile}
+                onFileSelect={setSelectedTargetFile}
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="batch" className="flex-1">
+          <BatchPanel
+            inputDirectory={inputDirectory}
+            templatesDirectory={templatesDirectory}
+            targetDirectory={targetDirectory}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+        </TabsContent>
+      </Tabs>
+    </main>
+  )
 }
