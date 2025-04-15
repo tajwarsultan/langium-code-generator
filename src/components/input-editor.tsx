@@ -3,22 +3,34 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Save, RefreshCw, FileText } from "lucide-react"
+import { Save, RefreshCw, FileText, Plus } from "lucide-react"
 import CodeEditor from "@/components/code-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface InputEditorProps {
   inputDirectory: FileSystemDirectoryHandle | null
   selectedFile: string | null
   onFileSelect: (file: string | null) => void
   onContentChange: (changed: boolean) => void
+  onInputContentChange: (content: string) => void
 }
 
-export default function InputEditor({ inputDirectory, selectedFile, onFileSelect, onContentChange }: InputEditorProps) {
+export default function InputEditor({
+  inputDirectory,
+  selectedFile,
+  onFileSelect,
+  onContentChange,
+  onInputContentChange,
+}: InputEditorProps) {
   const [content, setContent] = useState<string>("")
   const [originalContent, setOriginalContent] = useState<string>("")
   const [isChanged, setIsChanged] = useState(false)
   const [files, setFiles] = useState<string[]>([])
+  const [isNewFileDialogOpen, setIsNewFileDialogOpen] = useState(false)
+  const [newFileName, setNewFileName] = useState("")
 
   useEffect(() => {
     const loadFiles = async () => {
@@ -59,6 +71,7 @@ export default function InputEditor({ inputDirectory, selectedFile, onFileSelect
           setOriginalContent(text)
           setIsChanged(false)
           onContentChange(false)
+          onInputContentChange(text)
         } catch (error) {
           console.error("Error loading file content:", error)
         }
@@ -67,23 +80,26 @@ export default function InputEditor({ inputDirectory, selectedFile, onFileSelect
         setOriginalContent("")
         setIsChanged(false)
         onContentChange(false)
+        onInputContentChange("")
       }
     }
 
     loadFileContent()
-  }, [inputDirectory, selectedFile, onContentChange])
+  }, [inputDirectory, selectedFile, onContentChange, onInputContentChange])
 
   const handleContentChange = (newContent: string) => {
     setContent(newContent)
     const changed = newContent !== originalContent
     setIsChanged(changed)
     onContentChange(changed)
+    onInputContentChange(newContent)
   }
 
   const handleReset = () => {
     setContent(originalContent)
     setIsChanged(false)
     onContentChange(false)
+    onInputContentChange(originalContent)
   }
 
   const handleSave = async () => {
@@ -104,6 +120,36 @@ export default function InputEditor({ inputDirectory, selectedFile, onFileSelect
       setOriginalContent(content)
       setIsChanged(false)
       onContentChange(false)
+    }
+  }
+
+  const handleCreateNewFile = async () => {
+    if (!inputDirectory || !newFileName) return
+
+    try {
+      const fileHandle = await inputDirectory.getFileHandle(newFileName, { create: true })
+      const writable = await fileHandle.createWritable()
+      await writable.write("")
+      await writable.close()
+
+      // Refresh file list
+      const fileList: string[] = []
+      for await (const entry of inputDirectory.values()) {
+        if (entry.kind === "file") {
+          fileList.push(entry.name)
+        }
+      }
+      setFiles(fileList)
+
+      // Select the new file
+      onFileSelect(newFileName)
+
+      // Close the dialog
+      setIsNewFileDialogOpen(false)
+      setNewFileName("")
+    } catch (error) {
+      console.error("Error creating new file:", error)
+      alert(`Failed to create file: ${error}`)
     }
   }
 
@@ -137,11 +183,41 @@ export default function InputEditor({ inputDirectory, selectedFile, onFileSelect
               ))}
             </SelectContent>
           </Select>
+          <Button variant="outline" size="icon" onClick={() => setIsNewFileDialogOpen(true)} disabled={!inputDirectory}>
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="flex-1 p-0">
         <CodeEditor value={content} onChange={handleContentChange} language="typescript" />
       </CardContent>
+
+      <Dialog open={isNewFileDialogOpen} onOpenChange={setIsNewFileDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Input File</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                File Name
+              </Label>
+              <Input
+                id="name"
+                value={newFileName}
+                onChange={(e) => setNewFileName(e.target.value)}
+                className="col-span-3"
+                placeholder="example.dsl"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleCreateNewFile} disabled={!newFileName}>
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
