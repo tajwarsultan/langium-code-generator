@@ -3,16 +3,21 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Save, RefreshCw, FileText, Play } from "lucide-react"
+import { Save, RefreshCw, FileText, Play, AlertCircle } from "lucide-react"
 import CodeEditor from "@/components/code-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { CodeGenerator } from "@/lib/langium-service"
 
 interface TemplateEditorProps {
   templatesDirectory: FileSystemDirectoryHandle | null
   selectedFile: string | null
   onFileSelect: (file: string | null) => void
   onContentChange: (changed: boolean) => void
+  inputContent: string
+  targetDirectory: FileSystemDirectoryHandle | null
+  grammarCompiled: boolean
 }
 
 export default function TemplateEditor({
@@ -20,12 +25,18 @@ export default function TemplateEditor({
   selectedFile,
   onFileSelect,
   onContentChange,
+  inputContent,
+  targetDirectory,
+  grammarCompiled,
 }: TemplateEditorProps) {
   const [content, setContent] = useState<string>("")
   const [originalContent, setOriginalContent] = useState<string>("")
   const [isChanged, setIsChanged] = useState(false)
   const [files, setFiles] = useState<string[]>([])
   const [selector, setSelector] = useState<string>("")
+  const [generationStatus, setGenerationStatus] = useState<{ success: boolean; message: string } | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const codeGenerator = new CodeGenerator()
 
   useEffect(() => {
     const loadFiles = async () => {
@@ -114,10 +125,61 @@ export default function TemplateEditor({
     }
   }
 
-  const handleGenerate = () => {
-    // This will be implemented in Package 3
-    console.log("Generate with template:", selectedFile)
-    console.log("Selector:", selector)
+  const handleGenerate = async () => {
+    if (!selectedFile || !inputContent || !targetDirectory) {
+      setGenerationStatus({
+        success: false,
+        message: "Missing required inputs: template, input content, or target directory",
+      })
+      return
+    }
+
+    if (!grammarCompiled) {
+      setGenerationStatus({
+        success: false,
+        message: "Grammar must be compiled successfully before generating code",
+      })
+      return
+    }
+
+    setIsGenerating(true)
+    setGenerationStatus(null)
+
+    try {
+      // Generate the code
+      const generatedCode = codeGenerator.generateCode(inputContent, content, selector)
+
+      // Generate output filename
+      const inputFileName = "input.txt" // Placeholder
+      const outputFileName = codeGenerator.generateOutputName(inputFileName, selectedFile)
+
+      // Save the generated code to the target directory
+      try {
+        const fileHandle = await targetDirectory.getFileHandle(outputFileName, { create: true })
+        const writable = await fileHandle.createWritable()
+        await writable.write(generatedCode)
+        await writable.close()
+
+        setGenerationStatus({
+          success: true,
+          message: `Code generated successfully and saved as ${outputFileName}`,
+        })
+      } catch (error) {
+        console.warn("Unable to save generated file:", error)
+        setGenerationStatus({
+          success: true,
+          message: `Code generated successfully but couldn't save to file: ${error}`,
+        })
+      }
+    } catch (error) {
+      console.error("Error generating code:", error)
+      setGenerationStatus({
+        success: false,
+        message: `Failed to generate code: ${error}`,
+      })
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   return (
@@ -160,14 +222,37 @@ export default function TemplateEditor({
           />
         </div>
         <div className="mt-2">
-          <Button variant="default" size="sm" onClick={handleGenerate} disabled={!selectedFile} className="w-full">
-            <Play className="h-4 w-4 mr-1" />
-            Generate
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleGenerate}
+            disabled={!selectedFile || !inputContent || !targetDirectory || isGenerating || !grammarCompiled}
+            className="w-full"
+          >
+            {isGenerating ? (
+              <>
+                <span className="animate-spin mr-1">⏳</span>
+                Generating...
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4 mr-1" />
+                Generate
+              </>
+            )}
           </Button>
         </div>
+        {generationStatus && (
+          <div className="mt-2">
+            <Alert variant={generationStatus.success ? "default" : "destructive"}>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{generationStatus.message}</AlertDescription>
+            </Alert>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="flex-1 p-0">
-        <CodeEditor value={content} onChange={handleContentChange} language="html" />
+        <CodeEditor value={content} onChange={handleContentChange} language="template" />
       </CardContent>
     </Card>
   )
