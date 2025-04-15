@@ -1,51 +1,42 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 interface CodeEditorProps {
   value: string
   onChange: (value: string) => void
   language?: string
   readOnly?: boolean
+  height?: string
 }
 
-export default function CodeEditor({ value, onChange, language = "javascript", readOnly = false }: CodeEditorProps) {
+export default function CodeEditor({
+  value,
+  onChange,
+  language = "javascript",
+  readOnly = false,
+  height = "100%",
+}: CodeEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
-  const monacoRef = useRef<any>(null)
-  const editorInstanceRef = useRef<any>(null)
+  const [editor, setEditor] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // This is a placeholder for Monaco Editor integration
-    // In a real implementation, we would load Monaco Editor here
-    // For now, we'll use a simple textarea as a fallback
+    // Simple fallback if Monaco can't be loaded
+    if (!editorRef.current) return
 
-    // The actual implementation would look something like:
-    // import * as monaco from 'monaco-editor';
-    // monacoRef.current = monaco;
-    // editorInstanceRef.current = monaco.editor.create(editorRef.current!, {
-    //   value,
-    //   language,
-    //   theme: 'vs-dark',
-    //   automaticLayout: true,
-    //   readOnly
-    // });
-
-    // For the Langium playground integration, we would need to:
-    // 1. Import the Langium Monaco integration
-    // 2. Register the Langium language with Monaco
-    // 3. Set up the editor with Langium-specific configurations
-
-    // For now, we'll just use a textarea as a placeholder
+    // Create a textarea as fallback
     const textarea = document.createElement("textarea")
     textarea.value = value
     textarea.readOnly = readOnly
     textarea.style.width = "100%"
-    textarea.style.height = "100%"
+    textarea.style.height = height
     textarea.style.resize = "none"
     textarea.style.fontFamily = "monospace"
     textarea.style.padding = "8px"
     textarea.style.border = "none"
     textarea.style.outline = "none"
+    textarea.style.backgroundColor = "#f5f5f5"
 
     if (!readOnly) {
       textarea.addEventListener("input", () => {
@@ -53,28 +44,129 @@ export default function CodeEditor({ value, onChange, language = "javascript", r
       })
     }
 
-    if (editorRef.current) {
-      editorRef.current.innerHTML = ""
-      editorRef.current.appendChild(textarea)
+    // Clear previous content
+    if (editorRef.current.firstChild) {
+      editorRef.current.removeChild(editorRef.current.firstChild)
+    }
+
+    editorRef.current.appendChild(textarea)
+    setIsLoading(false)
+
+    // Try to load Monaco if available
+    if (typeof window !== "undefined") {
+      // Check if Monaco is already loaded
+      if ((window as any).monaco) {
+        initMonaco()
+      } else {
+        // Load Monaco dynamically
+        const script = document.createElement("script")
+        script.src = "https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs/loader.js"
+        script.async = true
+        script.onload = () => {
+          const require = (window as any).require
+          require.config({
+            paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs" },
+          })
+          require(["vs/editor/editor.main"], initMonaco)
+        }
+        document.body.appendChild(script)
+      }
     }
 
     return () => {
-      // Cleanup
-      if (editorRef.current) {
-        editorRef.current.innerHTML = ""
+      if (editor) {
+        editor.dispose()
       }
     }
-  }, [language, readOnly])
+  }, [])
 
   // Update the editor value when the value prop changes
   useEffect(() => {
-    if (editorRef.current) {
+    if (editor && value !== editor.getValue()) {
+      editor.setValue(value)
+    } else if (!editor && editorRef.current) {
       const textarea = editorRef.current.querySelector("textarea")
       if (textarea && textarea.value !== value) {
         textarea.value = value
       }
     }
-  }, [value])
+  }, [value, editor])
 
-  return <div ref={editorRef} className="w-full h-full border" />
+  const initMonaco = () => {
+    if (!editorRef.current) return
+
+    // Clear the fallback textarea
+    if (editorRef.current.firstChild) {
+      editorRef.current.removeChild(editorRef.current.firstChild)
+    }
+
+    const monaco = (window as any).monaco
+
+    // Register custom languages if needed
+    if (language === "langium" && !monaco.languages.getLanguages().some((lang: any) => lang.id === "langium")) {
+      monaco.languages.register({ id: "langium" })
+      monaco.languages.setMonarchTokensProvider("langium", {
+        tokenizer: {
+          root: [
+            [/grammar\s+\w+/, "keyword"],
+            [/\/\/.*/, "comment"],
+            [/\/\*/, "comment", "@comment"],
+            [/\b(terminal|hidden|fragment|entry|interface|type|returns|infers|with|extends)\b/, "keyword"],
+            [/[a-zA-Z_]\w*/, "identifier"],
+            [/"[^"]*"/, "string"],
+            [/'[^']*'/, "string"],
+          ],
+          comment: [
+            [/[^/*]+/, "comment"],
+            [/\*\//, "comment", "@pop"],
+            [/[/*]/, "comment"],
+          ],
+        },
+      })
+    }
+
+    if (language === "template" && !monaco.languages.getLanguages().some((lang: any) => lang.id === "template")) {
+      monaco.languages.register({ id: "template" })
+      monaco.languages.setMonarchTokensProvider("template", {
+        tokenizer: {
+          root: [
+            [/<%=/, { token: "delimiter.template", next: "@templateExpr" }],
+            [/<%/, { token: "delimiter.template", next: "@templateCode" }],
+            [/./, "content"],
+          ],
+          templateExpr: [
+            [/%>/, { token: "delimiter.template", next: "@root" }],
+            [/[^%>]+/, "expression"],
+          ],
+          templateCode: [
+            [/%>/, { token: "delimiter.template", next: "@root" }],
+            [/[^%>]+/, "code"],
+          ],
+        },
+      })
+    }
+
+    // Create editor
+    const editorInstance = monaco.editor.create(editorRef.current, {
+      value,
+      language: language === "langium" ? "langium" : language === "template" ? "template" : language,
+      theme: "vs-dark",
+      automaticLayout: true,
+      minimap: { enabled: false },
+      scrollBeyondLastLine: false,
+      readOnly,
+      fontSize: 14,
+      lineNumbers: "on",
+    })
+
+    editorInstance.onDidChangeModelContent(() => {
+      const newValue = editorInstance.getValue()
+      onChange(newValue)
+    })
+
+    setEditor(editorInstance)
+    setIsLoading(false)
+  }
+
+  return <div ref={editorRef} className="w-full h-full border" style={{ height }} />
 }
