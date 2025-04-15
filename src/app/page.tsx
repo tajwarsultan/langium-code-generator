@@ -8,6 +8,8 @@ import InputEditor from "@/components/input-editor"
 import TemplateEditor from "@/components/template-editor"
 import ResultViewer from "@/components/result-viewer"
 import BatchPanel from "@/components/batch-panel"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from 'lucide-react'
 
 export default function Home() {
   const [dslDirectory, setDslDirectory] = useState<any | null>(null)
@@ -22,6 +24,8 @@ export default function Home() {
   const [grammarChanged, setGrammarChanged] = useState(false)
   const [inputChanged, setInputChanged] = useState(false)
   const [templateChanged, setTemplateChanged] = useState(false)
+  const [grammarCompiled, setGrammarCompiled] = useState(false)
+  const [currentInputContent, setCurrentInputContent] = useState("")
 
   return (
     <main className="container mx-auto p-4 h-screen flex flex-col">
@@ -56,6 +60,13 @@ export default function Home() {
           label="Templates Directory"
           directory={templatesDirectory}
           onDirectoryChange={setTemplatesDirectory}
+          checkBeforeChange={() => {
+            if (templateChanged) {
+              alert("Please reset or save Template file first!")
+              return false
+            }
+            return true
+          }}
         />
         <DirectorySelector
           label="Target Directory"
@@ -64,16 +75,29 @@ export default function Home() {
         />
       </div>
 
+      {!dslDirectory && (
+        <Alert className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Please select a DSL directory containing your Langium grammar file (.langium or .grammar)
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Tabs defaultValue="single" className="flex-1 flex flex-col">
         <TabsList>
-          <TabsTrigger value="single">Single</TabsTrigger>
-          <TabsTrigger value="batch">Batch</TabsTrigger>
+          <TabsTrigger value="single">Single File Generation</TabsTrigger>
+          <TabsTrigger value="batch">Batch Generation</TabsTrigger>
         </TabsList>
 
         <TabsContent value="single" className="flex-1 flex flex-col">
           <div className="grid grid-cols-2 gap-4 h-full">
             <div className="flex flex-col">
-              <GrammarEditor dslDirectory={dslDirectory} onContentChange={(changed) => setGrammarChanged(changed)} />
+              <GrammarEditor 
+                dslDirectory={dslDirectory} 
+                onContentChange={(changed) => setGrammarChanged(changed)}
+                onGrammarCompiled={(success) => setGrammarCompiled(success)}
+              />
             </div>
             <div className="flex flex-col">
               <InputEditor
@@ -81,6 +105,7 @@ export default function Home() {
                 selectedFile={selectedInputFile}
                 onFileSelect={setSelectedInputFile}
                 onContentChange={(changed) => setInputChanged(changed)}
+                onInputContentChange={setCurrentInputContent}
               />
             </div>
             <div className="flex flex-col">
@@ -89,6 +114,9 @@ export default function Home() {
                 selectedFile={selectedTemplateFile}
                 onFileSelect={setSelectedTemplateFile}
                 onContentChange={(changed) => setTemplateChanged(changed)}
+                inputContent={currentInputContent}
+                targetDirectory={targetDirectory}
+                grammarCompiled={grammarCompiled}
               />
             </div>
             <div className="flex flex-col">
@@ -106,6 +134,7 @@ export default function Home() {
             inputDirectory={inputDirectory}
             templatesDirectory={templatesDirectory}
             targetDirectory={targetDirectory}
+            grammarCompiled={grammarCompiled}
           />
         </TabsContent>
       </Tabs>
