@@ -9,14 +9,12 @@ import { useRef, useState } from "react"
 
 interface DirectorySelectorProps {
   label: string
-  directory: any | null
-  onDirectoryChange: (directory: any | null) => void
+  onDirectoryChange: (directory: { name: string; files: File[]; values: () => AsyncIterable<{ kind: string; name: string; getFile: () => Promise<File> }>; getFileHandle: (name: string) => Promise<{ getFile: () => Promise<File>; createWritable: () => Promise<{ write: (content: string) => Promise<void>; close: () => Promise<void> }> }> } | null) => void
   checkBeforeChange?: () => boolean
 }
 
 export default function DirectorySelector({
   label,
-  directory,
   onDirectoryChange,
   checkBeforeChange = () => true,
 }: DirectorySelectorProps) {
@@ -28,7 +26,6 @@ export default function DirectorySelector({
       return
     }
 
-    // Trigger the hidden file input
     fileInputRef.current?.click()
   }
 
@@ -37,28 +34,31 @@ export default function DirectorySelector({
     if (!files || files.length === 0) return
 
     // Create a virtual directory object with the files
-    const directoryPath = (files[0] as any).webkitRelativePath.split("/")[0]
-    setDirectoryName(directoryPath)
+    interface FileWithRelativePath extends File {
+      webkitRelativePath: string;
+    }
 
-    // Create a virtual directory object
+    const directoryPath = (files[0] as FileWithRelativePath).webkitRelativePath.split("/")[0];
+    setDirectoryName(directoryPath);
+
     const virtualDirectory = {
       name: directoryPath,
-      files: Array.from(files),
+      files: Array.from(files) as FileWithRelativePath[],
       async *values() {
         for (const file of this.files) {
-          const relativePath = (file as any).webkitRelativePath
-          const fileName = relativePath.split("/").pop()
+          const relativePath = file.webkitRelativePath;
+          const fileName = relativePath.split("/").pop() || "unknown";
           yield {
             kind: "file",
             name: fileName,
             getFile: async () => file,
-          }
+          };
         }
       },
       async getFileHandle(name: string) {
         const file = this.files.find((f) => {
-          const relativePath = (f as any).webkitRelativePath
-          const fileName = relativePath.split("/").pop()
+          const relativePath = f.webkitRelativePath;
+          const fileName = relativePath.split("/").pop();
           return fileName === name
         })
 
@@ -67,9 +67,6 @@ export default function DirectorySelector({
         return {
           getFile: async () => file,
           createWritable: async () => {
-            // In a real implementation, we would use the File System Access API
-            // Since we can't write to the file system in this context, we'll just
-            // create a mock implementation that logs the write operations
             console.warn("Writing to files is not supported in this preview environment")
             return {
               write: async (content: string) => {
@@ -108,8 +105,7 @@ export default function DirectorySelector({
             type="file"
             ref={fileInputRef}
             onChange={handleFileInputChange}
-            webkitdirectory="true"
-            directory=""
+            {...{ webkitdirectory: "true", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>}
             multiple
             className="hidden"
           />
