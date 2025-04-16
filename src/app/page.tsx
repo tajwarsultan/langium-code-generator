@@ -12,10 +12,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from 'lucide-react'
 
 export default function Home() {
-  const [dslDirectory, setDslDirectory] = useState<any | null>(null)
-  const [inputDirectory, setInputDirectory] = useState<any | null>(null)
-  const [templatesDirectory, setTemplatesDirectory] = useState<any | null>(null)
-  const [targetDirectory, setTargetDirectory] = useState<any | null>(null)
+  const [dslDirectory, setDslDirectory] = useState<FileSystemDirectoryHandle | null>(null)
+  const [inputDirectory, setInputDirectory] = useState<FileSystemDirectoryHandle | null>(null)
+  const [templatesDirectory, setTemplatesDirectory] = useState<FileSystemDirectoryHandle | null>(null)
+  const [targetDirectory, setTargetDirectory] = useState<FileSystemDirectoryHandle | null>(null)
 
   const [selectedInputFile, setSelectedInputFile] = useState<string | null>(null)
   const [selectedTemplateFile, setSelectedTemplateFile] = useState<string | null>(null)
@@ -31,6 +31,7 @@ export default function Home() {
     <main className="container mx-auto p-4 h-screen flex flex-col">
       <h1 className="text-2xl font-bold mb-4">Langium Code Generator</h1>
 
+      {/* Directory Selectors */}
       <div className="grid grid-cols-4 gap-4 mb-4">
         <DirectorySelector
           label="DSL Directory"
@@ -75,6 +76,7 @@ export default function Home() {
         />
       </div>
 
+      {/* Alert for Missing DSL Directory */}
       {!dslDirectory && (
         <Alert className="mb-4">
           <AlertCircle className="h-4 w-4" />
@@ -84,19 +86,21 @@ export default function Home() {
         </Alert>
       )}
 
+      {/* Tabs for Single and Batch Generation */}
       <Tabs defaultValue="single" className="flex-1 flex flex-col">
         <TabsList>
           <TabsTrigger value="single">Single File Generation</TabsTrigger>
           <TabsTrigger value="batch">Batch Generation</TabsTrigger>
         </TabsList>
 
+        {/* Single File Generation */}
         <TabsContent value="single" className="flex-1 flex flex-col">
           <div className="grid grid-cols-2 gap-4 h-full">
             <div className="flex flex-col">
               <GrammarEditor 
                 dslDirectory={dslDirectory} 
-                onContentChange={(changed) => setGrammarChanged(changed)}
-                onGrammarCompiled={(success) => setGrammarCompiled(success)}
+                onContentChange={setGrammarChanged}
+                onGrammarCompiled={setGrammarCompiled}
               />
             </div>
             <div className="flex flex-col">
@@ -104,16 +108,16 @@ export default function Home() {
                 inputDirectory={inputDirectory}
                 selectedFile={selectedInputFile}
                 onFileSelect={setSelectedInputFile}
-                onContentChange={(changed) => setInputChanged(changed)}
+                onContentChange={setInputChanged}
                 onInputContentChange={setCurrentInputContent}
               />
             </div>
             <div className="flex flex-col">
               <TemplateEditor
-                templatesDirectory={templatesDirectory}
+                templatesDirectory={templatesDirectory as FileSystemDirectoryHandle | null}
                 selectedFile={selectedTemplateFile}
                 onFileSelect={setSelectedTemplateFile}
-                onContentChange={(changed) => setTemplateChanged(changed)}
+                onContentChange={setTemplateChanged}
                 inputContent={currentInputContent}
                 targetDirectory={targetDirectory}
                 grammarCompiled={grammarCompiled}
@@ -129,6 +133,7 @@ export default function Home() {
           </div>
         </TabsContent>
 
+        {/* Batch Generation */}
         <TabsContent value="batch" className="flex-1">
           <BatchPanel
             inputDirectory={inputDirectory}
