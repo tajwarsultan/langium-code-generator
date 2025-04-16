@@ -2,7 +2,7 @@ export interface AstNode {
   $type: string
   $container?: AstNode
   $containerProperty?: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface Grammar {
@@ -13,7 +13,7 @@ export interface Grammar {
 export interface Rule {
   name: string
   type: string
-  definition: any
+  definition: string | object
 }
 
 export class LangiumParser {
@@ -21,11 +21,8 @@ export class LangiumParser {
 
   parseGrammar(input: string): Grammar | null {
     try {
-      // This is a very simplified parser for demonstration
-      // In a real implementation, you would use the actual Langium parser
       const grammarName = input.match(/grammar\s+(\w+)/)?.[1] || "UnnamedGrammar"
 
-      // Extract rules using regex (very simplified)
       const ruleRegex = /(\w+)\s*:\s*([^;]+);/g
       const rules: Rule[] = []
       let match
@@ -53,14 +50,10 @@ export class LangiumParser {
     }
 
     try {
-      // This is a simplified AST builder for demonstration
-      // In a real implementation, you would use the actual Langium parser
       const lines = input.split("\n")
       const rootNode: AstNode = { $type: this.grammar.name }
 
-      // Very simplified parsing logic
       for (const rule of this.grammar.rules) {
-        // Look for lines that might match this rule
         for (const line of lines) {
           if (line.trim().startsWith(rule.name)) {
             const value = line.split(":")[1]?.trim()
@@ -80,14 +73,13 @@ export class LangiumParser {
 }
 
 export class TemplateEngine {
-  private static templateCache = new Map<string, Function>()
+  private static templateCache = new Map<string, (model: Record<string, unknown>) => string>()
 
-  static compile(template: string): Function {
+  static compile(template: string): (model: Record<string, unknown>) => string {
     if (this.templateCache.has(template)) {
       return this.templateCache.get(template)!
     }
 
-    // Replace template tags with JavaScript
     let functionBody = "let result = '';\n"
     const code = template
       .replace(/<%=([\s\S]+?)%>/g, (_, code) => "${" + code.trim() + "}")
@@ -99,7 +91,7 @@ export class TemplateEngine {
     functionBody += "return result;"
 
     try {
-      const templateFunction = new Function("model", functionBody)
+      const templateFunction = new Function("model", functionBody) as (model: Record<string, unknown>) => string
       this.templateCache.set(template, templateFunction)
       return templateFunction
     } catch (error) {
@@ -108,7 +100,7 @@ export class TemplateEngine {
     }
   }
 
-  static render(template: string, model: any): string {
+  static render(template: string, model: Record<string, unknown>): string {
     try {
       const templateFunction = this.compile(template)
       return templateFunction(model)
@@ -138,11 +130,9 @@ export class CodeGenerator {
         return "Error: Failed to parse input"
       }
 
-      // Apply selector if provided
       let model = ast
       if (selectorCode && selectorCode.trim()) {
         try {
-          // Create a safe function to transform the AST
           const selectorFn = new Function(
             "ast",
             `
@@ -161,7 +151,6 @@ export class CodeGenerator {
         }
       }
 
-      // Generate code using the template
       return TemplateEngine.render(templateText, model)
     } catch (error) {
       console.error("Error generating code:", error)
@@ -193,14 +182,11 @@ export class CodeGenerator {
   }
 
   generateOutputName(inputName: string, templateName: string): string {
-    // Extract base name without extension
     const inputBase = inputName.replace(/\.[^/.]+$/, "")
     const templateBase = templateName.replace(/\.[^/.]+$/, "")
 
-    // Get template extension or default to .txt
     const templateExt = templateName.match(/\.([^/.]+)$/)?.[1] || "txt"
 
-    // Generate output name
     return `${inputBase}.${templateBase}.${templateExt}`
   }
 }
