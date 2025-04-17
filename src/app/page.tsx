@@ -36,7 +36,13 @@ export default function Home() {
         <DirectorySelector
           label="DSL Directory"
           directory={dslDirectory}
-          onDirectoryChange={setDslDirectory}
+          onDirectoryChange={(directory) => {
+            if (directory && 'kind' in directory) {
+              setDslDirectory(directory as unknown as FileSystemDirectoryHandle);
+            } else {
+              setDslDirectory(null);
+            }
+          }}
           checkBeforeChange={() => {
             if (grammarChanged) {
               alert("Please reset or save Grammar first!")
@@ -48,7 +54,13 @@ export default function Home() {
         <DirectorySelector
           label="Input Directory"
           directory={inputDirectory}
-          onDirectoryChange={setInputDirectory}
+          onDirectoryChange={(directory) => {
+            if (directory && 'kind' in directory) {
+              setInputDirectory(directory as unknown as FileSystemDirectoryHandle);
+            } else {
+              setInputDirectory(null);
+            }
+          }}
           checkBeforeChange={() => {
             if (inputChanged) {
               alert("Please reset or save Input file first!")
@@ -60,7 +72,13 @@ export default function Home() {
         <DirectorySelector
           label="Templates Directory"
           directory={templatesDirectory}
-          onDirectoryChange={setTemplatesDirectory}
+          onDirectoryChange={(directory) => {
+            if (directory && 'kind' in directory) {
+              setTemplatesDirectory(directory as unknown as FileSystemDirectoryHandle);
+            } else {
+              setTemplatesDirectory(null);
+            }
+          }}
           checkBeforeChange={() => {
             if (templateChanged) {
               alert("Please reset or save Template file first!")
@@ -72,7 +90,13 @@ export default function Home() {
         <DirectorySelector
           label="Target Directory"
           directory={targetDirectory}
-          onDirectoryChange={setTargetDirectory}
+          onDirectoryChange={(directory) => {
+            if (directory && 'kind' in directory) {
+              setTargetDirectory(directory as unknown as FileSystemDirectoryHandle);
+            } else {
+              setTargetDirectory(null);
+            }
+          }}
         />
       </div>
 
@@ -86,14 +110,12 @@ export default function Home() {
         </Alert>
       )}
 
-      {/* Tabs for Single and Batch Generation */}
       <Tabs defaultValue="single" className="flex-1 flex flex-col">
         <TabsList>
           <TabsTrigger value="single">Single File Generation</TabsTrigger>
           <TabsTrigger value="batch">Batch Generation</TabsTrigger>
         </TabsList>
 
-        {/* Single File Generation */}
         <TabsContent value="single" className="flex-1 flex flex-col">
           <div className="grid grid-cols-2 gap-4 h-full">
             <div className="flex flex-col">
