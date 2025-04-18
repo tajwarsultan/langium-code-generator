@@ -1,6 +1,11 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import * as monaco from "monaco-editor"
+
+interface WindowWithMonaco extends Window {
+  monaco?: typeof monaco
+}
 
 interface CodeEditorProps {
   value: string
@@ -18,14 +23,11 @@ export default function CodeEditor({
   height = "100%",
 }: CodeEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
-  const [editor, setEditor] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [editor, setEditor] = useState<monaco.editor.IStandaloneCodeEditor | null>(null)
 
   useEffect(() => {
-    // Simple fallback if Monaco can't be loaded
     if (!editorRef.current) return
 
-    // Create a textarea as fallback
     const textarea = document.createElement("textarea")
     textarea.value = value
     textarea.readOnly = readOnly
@@ -44,18 +46,14 @@ export default function CodeEditor({
       })
     }
 
-    // Clear previous content
     if (editorRef.current.firstChild) {
       editorRef.current.removeChild(editorRef.current.firstChild)
     }
-
+      if ((window as WindowWithMonaco).monaco) {
     editorRef.current.appendChild(textarea)
-    setIsLoading(false)
 
-    // Try to load Monaco if available
     if (typeof window !== "undefined") {
-      // Check if Monaco is already loaded
-      if ((window as any).monaco) {
+      if ((window as WindowWithMonaco).monaco) {
         initMonaco()
       } else {
         // Load Monaco dynamically
@@ -63,7 +61,7 @@ export default function CodeEditor({
         script.src = "https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs/loader.js"
         script.async = true
         script.onload = () => {
-          const require = (window as any).require
+          const require = ((window as unknown) as WindowWithMonaco & { require: { config: (options: { paths: { [key: string]: string } }) => void; (modules: string[], callback: () => void): void } }).require
           require.config({
             paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs" },
           })
@@ -71,6 +69,8 @@ export default function CodeEditor({
         }
         document.body.appendChild(script)
       }
+    }
+
     }
 
     return () => {
@@ -100,10 +100,10 @@ export default function CodeEditor({
       editorRef.current.removeChild(editorRef.current.firstChild)
     }
 
-    const monaco = (window as any).monaco
+    const monaco = (window as WindowWithMonaco).monaco
 
     // Register custom languages if needed
-    if (language === "langium" && !monaco.languages.getLanguages().some((lang: any) => lang.id === "langium")) {
+    if (language === "langium" && monaco?.languages && !monaco.languages.getLanguages().some((lang: monaco.languages.ILanguageExtensionPoint) => lang.id === "langium")) {
       monaco.languages.register({ id: "langium" })
       monaco.languages.setMonarchTokensProvider("langium", {
         tokenizer: {
@@ -125,7 +125,7 @@ export default function CodeEditor({
       })
     }
 
-    if (language === "template" && !monaco.languages.getLanguages().some((lang: any) => lang.id === "template")) {
+    if (language === "template" && monaco?.languages && !monaco.languages.getLanguages().some((lang: monaco.languages.ILanguageExtensionPoint) => lang.id === "template")) {
       monaco.languages.register({ id: "template" })
       monaco.languages.setMonarchTokensProvider("template", {
         tokenizer: {
@@ -147,6 +147,11 @@ export default function CodeEditor({
     }
 
     // Create editor
+    if (!monaco) {
+      console.error("Monaco editor is not loaded.")
+      return
+    }
+
     const editorInstance = monaco.editor.create(editorRef.current, {
       value,
       language: language === "langium" ? "langium" : language === "template" ? "template" : language,
@@ -165,7 +170,6 @@ export default function CodeEditor({
     })
 
     setEditor(editorInstance)
-    setIsLoading(false)
   }
 
   return <div ref={editorRef} className="w-full h-full border" style={{ height }} />
