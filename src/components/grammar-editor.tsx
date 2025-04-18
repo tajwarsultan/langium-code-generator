@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Save, RefreshCw, Play, AlertCircle } from "lucide-react"
@@ -20,22 +20,21 @@ export default function GrammarEditor({ dslDirectory, onContentChange, onGrammar
   const [isChanged, setIsChanged] = useState(false)
   const [compileStatus, setCompileStatus] = useState<{ success: boolean; message: string } | null>(null)
   const [grammarFile, setGrammarFile] = useState<string | null>(null)
-  const parser = new LangiumParser()
+  const parser = useMemo(() => new LangiumParser(), [])
 
   useEffect(() => {
-    let isMounted = true // Add a flag to track component mount status
+    let isMounted = true
 
     const loadGrammar = async () => {
       if (dslDirectory) {
         try {
-          // Try to find a grammar file in the DSL directory
           for await (const entry of dslDirectory.values()) {
-            if (!isMounted) return // Check if component is still mounted
+            if (!isMounted) return
 
             if (entry.kind === "file" && (entry.name.endsWith(".langium") || entry.name.endsWith(".grammar"))) {
               const file = await (entry as FileSystemFileHandle).getFile()
               const text = await file.text()
-              if (!isMounted) return // Check if component is still mounted
+              if (!isMounted) return
               setContent(text)
               setOriginalContent(text)
               setGrammarFile(entry.name)
@@ -49,14 +48,14 @@ export default function GrammarEditor({ dslDirectory, onContentChange, onGrammar
           }
         } catch (error) {
           console.error("Error loading grammar:", error)
-          if (!isMounted) return // Check if component is still mounted
+          if (!isMounted) return
           setCompileStatus({
             success: false,
             message: `Error loading grammar: ${error}`,
           })
         }
       } else {
-        if (!isMounted) return // Check if component is still mounted
+        if (!isMounted) return
         setContent("")
         setOriginalContent("")
         setGrammarFile(null)
@@ -99,14 +98,13 @@ export default function GrammarEditor({ dslDirectory, onContentChange, onGrammar
       onContentChange(false)
     } catch (error) {
       console.warn("Unable to save file:", error)
-      // In preview mode, just pretend we saved
       setOriginalContent(content)
       setIsChanged(false)
       onContentChange(false)
     }
   }
 
-  const compileGrammar = (grammarText: string) => {
+  const compileGrammar = useCallback((grammarText: string) => {
     try {
       const grammar = parser.parseGrammar(grammarText)
       if (grammar) {
@@ -130,7 +128,7 @@ export default function GrammarEditor({ dslDirectory, onContentChange, onGrammar
       })
       onGrammarCompiled(false)
     }
-  }
+  }, [onGrammarCompiled, parser])
 
   const handleCompile = () => {
     compileGrammar(content)
