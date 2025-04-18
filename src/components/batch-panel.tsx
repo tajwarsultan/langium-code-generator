@@ -115,7 +115,6 @@ export default function BatchPanel({
     setBatchStatus(null)
 
     try {
-      // Load all input files
       const inputContents = new Map<string, string>()
       for (const fileName of inputFiles) {
         try {
@@ -129,7 +128,6 @@ export default function BatchPanel({
         }
       }
 
-      // Load all template files
       const templateContents = new Map<string, string>()
       for (const fileName of templateFiles) {
         try {
@@ -143,11 +141,9 @@ export default function BatchPanel({
         }
       }
 
-      // Generate code for each input/template combination
       setLogOutput((prev) => prev + `\nGenerating code...\n`)
       const results = codeGenerator.generateBatch(inputContents, templateContents, selector)
 
-      // Save generated files
       let successCount = 0
       let errorCount = 0
 
