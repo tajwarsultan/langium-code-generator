@@ -56,7 +56,6 @@ export default function CodeEditor({
       if ((window as WindowWithMonaco).monaco) {
         initMonaco()
       } else {
-        // Load Monaco dynamically
         const script = document.createElement("script")
         script.src = "https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs/loader.js"
         script.async = true
@@ -80,7 +79,6 @@ export default function CodeEditor({
     }
   }, [])
 
-  // Update the editor value when the value prop changes
   useEffect(() => {
     if (editor && value !== editor.getValue()) {
       editor.setValue(value)
@@ -95,14 +93,12 @@ export default function CodeEditor({
   const initMonaco = () => {
     if (!editorRef.current) return
 
-    // Clear the fallback textarea
     if (editorRef.current.firstChild) {
       editorRef.current.removeChild(editorRef.current.firstChild)
     }
 
     const monaco = (window as WindowWithMonaco).monaco
 
-    // Register custom languages if needed
     if (language === "langium" && monaco?.languages && !monaco.languages.getLanguages().some((lang: monaco.languages.ILanguageExtensionPoint) => lang.id === "langium")) {
       monaco.languages.register({ id: "langium" })
       monaco.languages.setMonarchTokensProvider("langium", {
@@ -146,7 +142,6 @@ export default function CodeEditor({
       })
     }
 
-    // Create editor
     if (!monaco) {
       console.error("Monaco editor is not loaded.")
       return
