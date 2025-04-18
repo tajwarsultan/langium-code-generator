@@ -35,7 +35,6 @@ export default function Home() {
       <div className="grid grid-cols-4 gap-4 mb-4">
         <DirectorySelector
           label="DSL Directory"
-          directory={dslDirectory}
           onDirectoryChange={(directory) => {
             if (directory && 'kind' in directory) {
               setDslDirectory(directory as unknown as FileSystemDirectoryHandle);
@@ -53,7 +52,6 @@ export default function Home() {
         />
         <DirectorySelector
           label="Input Directory"
-          directory={inputDirectory}
           onDirectoryChange={(directory) => {
             if (directory && 'kind' in directory) {
               setInputDirectory(directory as unknown as FileSystemDirectoryHandle);
@@ -71,7 +69,6 @@ export default function Home() {
         />
         <DirectorySelector
           label="Templates Directory"
-          directory={templatesDirectory}
           onDirectoryChange={(directory) => {
             if (directory && 'kind' in directory) {
               setTemplatesDirectory(directory as unknown as FileSystemDirectoryHandle);
@@ -89,7 +86,6 @@ export default function Home() {
         />
         <DirectorySelector
           label="Target Directory"
-          directory={targetDirectory}
           onDirectoryChange={(directory) => {
             if (directory && 'kind' in directory) {
               setTargetDirectory(directory as unknown as FileSystemDirectoryHandle);
