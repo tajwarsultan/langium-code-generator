@@ -15,6 +15,12 @@ interface BatchPanelProps {
   grammarCompiled: boolean
 }
 
+declare global {
+  interface FileSystemDirectoryHandle {
+    values(): AsyncIterableIterator<FileSystemHandle>
+  }
+}
+
 export default function BatchPanel({
   inputDirectory,
   templatesDirectory,
@@ -34,6 +40,7 @@ export default function BatchPanel({
       if (inputDirectory) {
         const fileList: string[] = []
         try {
+          // Now TypeScript recognizes the values() method
           for await (const entry of inputDirectory.values()) {
             if (entry.kind === "file") {
               fileList.push(entry.name)
@@ -47,7 +54,7 @@ export default function BatchPanel({
         setInputFiles([])
       }
     }
-
+  
     loadInputFiles()
   }, [inputDirectory])
 
@@ -56,6 +63,7 @@ export default function BatchPanel({
       if (templatesDirectory) {
         const fileList: string[] = []
         try {
+          // Fix for the values() method error
           for await (const entry of templatesDirectory.values()) {
             if (entry.kind === "file") {
               fileList.push(entry.name)
@@ -69,7 +77,7 @@ export default function BatchPanel({
         setTemplateFiles([])
       }
     }
-
+  
     loadTemplateFiles()
   }, [templatesDirectory])
 

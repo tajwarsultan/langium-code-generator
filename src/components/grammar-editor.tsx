@@ -33,7 +33,7 @@ export default function GrammarEditor({ dslDirectory, onContentChange, onGrammar
             if (!isMounted) return // Check if component is still mounted
 
             if (entry.kind === "file" && (entry.name.endsWith(".langium") || entry.name.endsWith(".grammar"))) {
-              const file = await entry.getFile()
+              const file = await (entry as FileSystemFileHandle).getFile()
               const text = await file.text()
               if (!isMounted) return // Check if component is still mounted
               setContent(text)
